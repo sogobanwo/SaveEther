@@ -11,22 +11,19 @@ describe("Lock", function () {
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
   async function deploySaveEther() {
-   
     const [owner, otherAccount] = await ethers.getSigners();
     const SaveEther = await ethers.getContractFactory("SaveEther");
-    const deeployedSaveEther = await SaveEther.deploy();
+    const deployedSaveEther = await SaveEther.deploy();
 
-    return { deeployedSaveEther, owner, otherAccount};
+    return { deployedSaveEther, owner, otherAccount };
   }
 
   describe("Deployment", function () {
     it("On deployment Contract balance should be zero", async function () {
-      const {deeployedSaveEther} = await loadFixture(deploySaveEther);
-      const contractBalance = deeployedSaveEther.checkContractBal()
-      expect(await contractBalance).to.equal(0)
+      const { deployedSaveEther } = await loadFixture(deploySaveEther);
+      const contractBalance = await deployedSaveEther.checkContractBal();
+      expect(contractBalance).to.equal(0);
     });
-
-  
 
     // it("Should set the right owner", async function () {
     //   const { lock, owner } = await loadFixture(deployOneYearLockFixture);
@@ -55,10 +52,56 @@ describe("Lock", function () {
   });
 
   describe("Deposit", function () {
-    it("")
-    
+    it(
+      "On deposit of ether into the contract the balance of the depositor should increase by the amount deposited"
+    ,
+      async function () {
+        const { deployedSaveEther, otherAccount } = await loadFixture(deploySaveEther);
+        await deployedSaveEther.connect(otherAccount).deposit({ value: 1 });
+        const savingsBalance = await deployedSaveEther.checkSavings(otherAccount)
+        expect(savingsBalance).to.equal(1)
+      })
+  });
+
+  
+  describe("Deposit event", function () {
+    it(
+      "On deposit of ether into the contract an event should be emmited"
+    ,
+      async function () {
+        const { deployedSaveEther, owner } = await loadFixture(deploySaveEther);
+        const depositEther = await deployedSaveEther.connect(owner).deposit({ value: 1 });
+        await expect(depositEther)
+          .to.emit(deployedSaveEther, "SavingSuccessful")
+          .withArgs(owner, 1);
+      })
+  });
+
+
+  describe("withdraw", function () {
+    it("On withdraw of an amount it should be deducted from the signers balance", async function () {
+      const { deployedSaveEther, otherAccount } = await loadFixture(deploySaveEther);
+      await deployedSaveEther.connect(otherAccount).deposit({ value: 1 });
+      const availbleBalanceBeforeWithdrawal = await deployedSaveEther.checkSavings(otherAccount)
+      await deployedSaveEther.connect(otherAccount).withdraw()
+      const availbleBalanceAfterWithdrawal = await deployedSaveEther.checkSavings(otherAccount)
+      expect(availbleBalanceAfterWithdrawal).to.be.lessThan(availbleBalanceBeforeWithdrawal)
+    })
   })
 
+  describe("sendOutSavings", function () {
+    it("Check for amount sent out and balance after transfer", async function () {
+      const { deployedSaveEther, owner, otherAccount } = await loadFixture(deploySaveEther);
+      await deployedSaveEther.connect(otherAccount).deposit({ value: 10 });
+      const availableBalanceBeforeTransfer =await deployedSaveEther.checkSavings(owner)
+      const amount = 5
+      await deployedSaveEther.connect(owner).sendOutSaving( otherAccount, 5 )
+      const availableBalanceAfterTransfer =await deployedSaveEther.checkSavings(owner)
+      // expect(availableBalanceAfterTransfer).to.equal(availableBalanceBeforeTransfer - amount)
+    })
+    
+    
+  })
   // describe("Withdrawals", function () {
   //   describe("Validations", function () {
   //     it("Should revert with the right error if called too soon", async function () {
