@@ -6,7 +6,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("Lock", function () {
+describe("SaveEther", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
@@ -14,41 +14,15 @@ describe("Lock", function () {
     const [owner, otherAccount] = await ethers.getSigners();
     const SaveEther = await ethers.getContractFactory("SaveEther");
     const deployedSaveEther = await SaveEther.deploy();
-
     return { deployedSaveEther, owner, otherAccount };
   }
 
-  describe("Deployment", function () {
+  describe("Check Deployment", function () {
     it("On deployment Contract balance should be zero", async function () {
       const { deployedSaveEther } = await loadFixture(deploySaveEther);
       const contractBalance = await deployedSaveEther.checkContractBal();
       expect(contractBalance).to.equal(0);
     });
-
-    // it("Should set the right owner", async function () {
-    //   const { lock, owner } = await loadFixture(deployOneYearLockFixture);
-
-    //   expect(await lock.owner()).to.equal(owner.address);
-    // });
-
-    // it("Should receive and store the funds to lock", async function () {
-    //   const { lock, lockedAmount } = await loadFixture(
-    //     deployOneYearLockFixture
-    //   );
-
-    //   expect(await ethers.provider.getBalance(lock.target)).to.equal(
-    //     lockedAmount
-    //   );
-    // });
-
-    // it("Should fail if the unlockTime is not in the future", async function () {
-    //   // We don't use the fixture here because we want a different deployment
-    //   const latestTime = await time.latest();
-    //   const Lock = await ethers.getContractFactory("Lock");
-    //   await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith(
-    //     "Unlock time should be in the future"
-    //   );
-    // });
   });
 
   describe("Deposit", function () {
@@ -92,12 +66,13 @@ describe("Lock", function () {
   describe("sendOutSavings", function () {
     it("Check for amount sent out and balance after transfer", async function () {
       const { deployedSaveEther, owner, otherAccount } = await loadFixture(deploySaveEther);
-      await deployedSaveEther.connect(otherAccount).deposit({ value: 10 });
+      const amountDeposited = ethers.parseEther("10")
+      await deployedSaveEther.connect(owner).deposit({ value: amountDeposited});
       const availableBalanceBeforeTransfer =await deployedSaveEther.checkSavings(owner)
-      const amount = 5
-      await deployedSaveEther.connect(owner).sendOutSaving( otherAccount, 5 )
-      const availableBalanceAfterTransfer =await deployedSaveEther.checkSavings(owner)
-      // expect(availableBalanceAfterTransfer).to.equal(availableBalanceBeforeTransfer - amount)
+      const amountTransferred = ethers.parseEther("5")
+      await deployedSaveEther.connect(owner).sendOutSaving( otherAccount, amountTransferred )
+      const availableBalanceAfterTransfer = await deployedSaveEther.checkSavings(owner)
+      expect(availableBalanceAfterTransfer).to.equal(availableBalanceBeforeTransfer - amountTransferred)
     })
     
     
